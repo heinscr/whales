@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whales Application</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐋 Whales Application</h1>
+            <p>Serverless Full-Stack App on GCP</p>
+        </header>
+
+        <main>
+            <section class="health-check">
+                <h2>System Status</h2>
+                <div class="status-grid">
+                    <div id="frontend-status" class="status-card">
+                        <h3>Frontend</h3>
+                        <p id="frontend-health">Checking...</p>
+                    </div>
+                    <div id="api-gateway-status" class="status-card">
+                        <h3>API Gateway</h3>
+                        <p id="api-gateway-health">Checking...</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="data-section">
+                <h2>Data Management</h2>
+                <div class="controls">
+                    <button onclick="fetchItems()" class="btn btn-primary">Refresh Items</button>
+                    <button onclick="showCreateForm()" class="btn btn-secondary">Add New Item</button>
+                </div>
+
+                <div id="create-form" class="form-container hidden">
+                    <h3>Create New Item</h3>
+                    <form onsubmit="createItem(event)">
+                        <input 
+                            type="text" 
+                            id="itemTitle" 
+                            placeholder="Item Title" 
+                            required
+                        >
+                        <input 
+                            type="number" 
+                            id="itemValue" 
+                            placeholder="Item Value" 
+                            required
+                        >
+                        <button type="submit" class="btn btn-primary">Create</button>
+                        <button type="button" onclick="hideCreateForm()" class="btn btn-secondary">Cancel</button>
+                    </form>
+                </div>
+
+                <div id="items-container" class="items-display">
+                    <p>Loading items...</p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 Whales Application | Serverless Architecture</p>
+        </footer>
+    </div>
+
+    <script src="/config.js"></script>
+    <script src="/api.js"></script>
+    <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+swagger: "2.0"
+info:
+  title: "Whales API"
+  version: "1.0.0"
+basePath: "/api"
+schemes:
+  - "https"
+consumes:
+  - "application/json"
+produces:
+  - "application/json"
+
+paths:
+  /health:
+    get:
+      summary: "Health check endpoint"
+      operationId: "health"
+      x-google-backend:
+        address: "${cloud_run_url}"
+        protocol: "h2"
+      responses:
+        200:
+          description: "Service is healthy"
+
+  /data:
+    get:
+      summary: "Fetch data"
+      operationId: "getData"
+      x-google-backend:
+        address: "${cloud_run_url}"
+        protocol: "h2"
+      responses:
+        200:
+          description: "Data retrieved successfully"
+
+  /items:
+    get:
+      summary: "List all items"
+      operationId: "listItems"
+      x-google-backend:
+        address: "${cloud_run_url}"
+        protocol: "h2"
+      responses:
+        200:
+          description: "List of items"
+    post:
+      summary: "Create new item"
+      operationId: "createItem"
+      parameters:
+        - in: "body"
+          name: "item"
+          schema:
+            type: "object"
+            properties:
+              title:
+                type: "string"
+              value:
+                type: "number"
+      x-google-backend:
+        address: "${cloud_run_url}"
+        protocol: "h2"
+      responses:
+        201:
+          description: "Item created"

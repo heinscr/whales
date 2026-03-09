@@ -1,0 +1,5 @@
+gcp_project_id    = "your-project-id"
+gcp_region        = "us-central1"
+environment       = "dev"
+backend_image_url = ""  # Leave empty initially, update after building container
+frontend_image_url = ""  # Leave empty initially, update after building container
