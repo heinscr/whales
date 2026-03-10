@@ -55,3 +55,6 @@ Thumbs.db
 *.seed
 *.pid.lock
 .cache/
+terraform/terraform.tfvars
+terraform/variables.tf
+

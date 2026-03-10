@@ -41,9 +41,23 @@ if [ ! -f terraform.tfvars ]; then
     exit 1
 fi
 
-# Initialize Terraform
+# Extract GCP project ID from terraform.tfvars
+GCP_PROJECT_ID=$(grep '^gcp_project_id' terraform.tfvars | grep -oP '"\K[^"]+')
+if [ -z "$GCP_PROJECT_ID" ]; then
+    echo -e "${RED}Error: Could not find gcp_project_id in terraform.tfvars${NC}"
+    exit 1
+fi
+
+BUCKET_NAME="whales-terraform-state-${GCP_PROJECT_ID}"
+
+echo -e "${YELLOW}Using Terraform state bucket: ${BUCKET_NAME}${NC}"
+echo ""
+
+# Initialize Terraform with dynamic backend configuration
 echo -e "${YELLOW}Initializing Terraform...${NC}"
-terraform init
+terraform init \
+  -backend-config="bucket=${BUCKET_NAME}" \
+  -backend-config="prefix=whales"
 
 # Format configuration
 echo -e "${YELLOW}Formatting Terraform configuration...${NC}"
@@ -68,16 +82,23 @@ if [[ $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
     terraform apply tfplan
     
     echo ""
-    echo -e "${GREEN}Infrastructure setup complete!${NC}"
+    echo -e "${GREEN}Infrastructure setup complete! (Step 1 of 2)${NC}"
     echo "========================================"
     echo "Terraform Outputs:"
     terraform output
     echo "========================================"
     echo ""
     echo -e "${YELLOW}Next steps:${NC}"
-    echo "1. Build and push container images: bash ../scripts/deploy.sh"
-    echo "2. Monitor infrastructure: gcloud run services list"
-    echo "3. View Firestore: https://console.cloud.google.com/firestore"
+    echo "1. Run: bash ../scripts/deploy.sh"
+    echo "   - This will build container images"
+    echo "   - Push to Google Container Registry"
+    echo "   - Deploy Cloud Run services"
+    echo "   - Configure API Gateway"
+    echo ""
+    echo -e "${YELLOW}Then you will see:${NC}"
+    echo "- API Gateway URL"
+    echo "- Backend Cloud Run URL"
+    echo "- Frontend Cloud Run URL"
     echo ""
     
     # Cleanup

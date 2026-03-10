@@ -1,3 +1,5 @@
+# NOTE: These outputs are defined after Cloud Run services are created by deploy.sh
+/*
 output "api_gateway_url" {
   description = "API Gateway base URL"
   value       = "https://${google_api_gateway_gateway.whales_gateway.default_hostname}"
@@ -12,6 +14,7 @@ output "frontend_cloud_run_url" {
   description = "Frontend Cloud Run service URL"
   value       = google_cloud_run_service.frontend.status[0].url
 }
+*/
 
 output "firestore_database" {
   description = "Firestore database name"

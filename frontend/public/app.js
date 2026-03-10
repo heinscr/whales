@@ -1,5 +1,8 @@
 // Application Logic
 document.addEventListener('DOMContentLoaded', async function() {
+  // Wait a moment for config to initialize from server
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
   checkFrontendHealth();
   checkAPIGatewayHealth();
   fetchItems();

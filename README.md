@@ -73,42 +73,42 @@ A serverless full-stack web application built with Terraform for GCP infrastruct
 
 - [Terraform](https://www.terraform.io/downloads) >= 1.0 (infrastructure setup)
 - [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) (GCP CLI)
-- [Docker](https://www.docker.com/products/docker-desktop) (only needed to build & push containers to Cloud Run)
+
+**Note:** Docker is not required. Cloud Run builds containers from source automatically.
 
 ### GCP Setup
 
-1. **Create a GCP Project**
-   ```bash
-   gcloud projects create whales-project
-   gcloud config set project whales-project
-   ```
-
-2. **Enable Required APIs**
-   ```bash
-   gcloud services enable \
-     run.googleapis.com \
-     apigateway.googleapis.com \
-     firestore.googleapis.com \
-     storage.googleapis.com \
-     artifactregistry.googleapis.com \
-     containerregistry.googleapis.com
-   ```
-
-3. **Create Container Registry bucket** (if using GCR)
-   ```bash
-   gcloud auth configure-docker gcr.io
-   ```
-
-4. **Set up Terraform state bucket**
-   ```bash
-   gsutil mb gs://whales-terraform-state-${PROJECT_ID}
-   ```
-
-5. **Authenticate with GCP**
+1. **Authenticate with GCP**
    ```bash
    gcloud auth login
    gcloud auth application-default login
    ```
+
+2. **Create a GCP Project**
+   ```bash
+   gcloud projects create whales-app
+   gcloud config set project whales-app
+   ```
+
+3. **Grant Cloud Build Permissions**
+   ```bash
+   PROJECT_ID=$(gcloud config get-value project)
+   
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --member=user:YOUR-EMAIL@gmail.com \
+     --role=roles/cloudbuild.builds.editor
+   
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --member=user:YOUR-EMAIL@gmail.com \
+     --role=roles/storage.admin
+   ```
+   
+   Replace `YOUR-EMAIL@gmail.com` with your actual Google account email.
+
+**That's it!** The infrastructure.sh script will automatically:
+- Enable required GCP APIs
+- Create the Terraform state storage bucket
+- Set up Firestore, Cloud Storage, and service accounts
 
 ## Project Structure
 
@@ -197,63 +197,40 @@ This will:
 - Configure API Gateway
 - Create necessary service accounts
 
-### 4. Build and Deploy Applications
+### 4. Deploy Applications
 
 ```bash
 bash scripts/deploy.sh
 ```
 
 This will:
-- Build frontend Docker image
-- Build backend Docker image
-- Push images to Container Registry
-- Deploy to Cloud Run
-- Configure API Gateway with cloud runs
+- Deploy backend API to Cloud Run (Python with source)
+- Deploy frontend to Cloud Run (Node.js with source)
+- Google Cloud automatically builds containers from your source code
 
 ### 5. Access Your Application
 
 After deployment, you'll see URLs for:
 - **Frontend**: `https://<frontend-cloud-run-url>`
-- **API Gateway**: `https://<api-gateway-url>`
-- **Backend**: `https://<backend-cloud-run-url>/api`
+- **Backend**: `https://<backend-cloud-run-url>`
+
+Just visit the Frontend URL to access the application.
 
 ## Deployment
 
-### Prerequisites
-
-- Docker installed and authenticated with GCP
-- gcloud CLI configured
-- Appropriate IAM permissions
-
-### Automated Deployment
+Deployment is fully automated using Cloud Run with Source:
 
 ```bash
 bash scripts/deploy.sh
 ```
 
-### Manual Steps
+**What happens:**
+1. Backend code is deployed as a Cloud Run service
+2. Frontend code is deployed as a Cloud Run service  
+3. Google Cloud automatically builds containers and applies optimizations
+4. Services are configured with appropriate environment variables and resource limits
 
-1. **Build Frontend**
-   ```bash
-   cd frontend
-   docker build -t gcr.io/PROJECT-ID/frontend:latest .
-   docker push gcr.io/PROJECT-ID/frontend:latest
-   ```
-
-2. **Build Backend**
-   ```bash
-   cd backend
-   docker build -t gcr.io/PROJECT-ID/backend-api:latest .
-   docker push gcr.io/PROJECT-ID/backend-api:latest
-   ```
-
-3. **Update Terraform and Deploy**
-   ```bash
-   cd terraform
-   terraform apply \
-     -var="backend_image_url=gcr.io/PROJECT-ID/backend-api:latest" \
-     -var="frontend_image_url=gcr.io/PROJECT-ID/frontend:latest"
-   ```
+**No Docker required!** Cloud Run builds everything for you.
 
 ## Configuration
 
@@ -266,13 +243,11 @@ PORT=3000
 API_GATEWAY_URL=https://<api-gateway-url>
 ```
 
-**Backend (.env)**
-```
-GCP_PROJECT_ID=your-project-id
-ENVIRONMENT=production
-FIRESTORE_DATABASE=(default)
-STORAGE_BUCKET=your-uploads-bucket
-```
+**Backend Environment Variables** (auto-configured by deploy.sh):
+- `GCP_PROJECT_ID` - Your GCP project
+- `ENVIRONMENT` - dev, staging, or production
+- `FIRESTORE_DATABASE` - Firestore database name
+- `STORAGE_BUCKET` - Cloud Storage bucket for uploads
 
 ### Terraform Variables
 

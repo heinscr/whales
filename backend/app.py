@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 from google.cloud import firestore
 from google.cloud import storage
 from datetime import datetime
@@ -11,15 +12,21 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# GCP Clients
-firestore_client = firestore.Client()
-storage_client = storage.Client()
+# Enable CORS for all routes
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# Configuration
+# Configuration (must come before GCP Clients)
 PROJECT_ID = os.getenv('GCP_PROJECT_ID', '')
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 FIRESTORE_DB = os.getenv('FIRESTORE_DATABASE', '(default)')
 UPLOADS_BUCKET = os.getenv('STORAGE_BUCKET', '')
+
+# GCP Clients (initialized after PROJECT_ID is set)
+firestore_client = firestore.Client(
+    project=PROJECT_ID if PROJECT_ID else None,
+    database=FIRESTORE_DB
+)
+storage_client = storage.Client(project=PROJECT_ID) if PROJECT_ID else storage.Client()
 
 @app.route('/api/health', methods=['GET'])
 def health():
