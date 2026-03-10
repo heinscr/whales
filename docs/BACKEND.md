@@ -12,14 +12,13 @@ The backend:
 - Stores files in Google Cloud Storage
 - Scales automatically via Cloud Run
 - Scales to zero when idle (cost-efficient)
-- Accessible only through API Gateway
+- Accessed directly from frontend with CORS enabled
 
 ## Setup
 
 ### Prerequisites
 - Python 3.9+
-- pip or poetry
-- Docker (for Cloud Run deployment)
+- pip
 
 ### Local Development
 
@@ -34,6 +33,9 @@ Set environment variables (create `.env` from `.env.example`):
 ```
 GCP_PROJECT_ID=your-project-id
 ENVIRONMENT=development
+FIRESTORE_DATABASE=(default)
+STORAGE_BUCKET=your-bucket-name
+PORT=8080
 ```
 
 ### Run Development Server
@@ -44,12 +46,6 @@ python app.py
 
 The backend will run on `http://localhost:8080`
 
-### Docker Build (for Cloud Run)
-
-```bash
-docker build -t backend-api:latest .
-```
-
 ## Configuration
 
 ### Environment Variables
@@ -59,12 +55,12 @@ Create a `.env` file:
 ```
 GCP_PROJECT_ID=whales-project
 ENVIRONMENT=development
-FIRESTORE_DATABASE=(default)
-STORAGE_BUCKET=whales-uploads
+FIRESTORE_DATABASE=development-database
+STORAGE_BUCKET=whales-project-development-uploads
 PORT=8080
 ```
 
-In production, these are set automatically by Terraform.
+In production (Cloud Run), these are set automatically by `deploy.sh`.
 
 ## Project Structure
 
@@ -72,7 +68,6 @@ In production, these are set automatically by Terraform.
 backend/
 ├── app.py              # Flask application
 ├── requirements.txt    # Python dependencies
-├── Dockerfile          # Container image
 ├── .env.example       # Environment template
 └── [future: additional modules as needed]
 ```
@@ -159,24 +154,6 @@ Content-Type: application/json
 DELETE /api/items/:item_id
 ```
 
-### Upload File
-```
-POST /api/upload
-Content-Type: multipart/form-data
-
-[upload file]
-```
-
-Response (201 Created):
-```json
-{
-  "message": "File uploaded successfully",
-  "bucket": "bucket-name",
-  "path": "uploads/1234567890-filename.ext",
-  "url": "https://storage.googleapis.com/..."
-}
-```
-
 ## Development
 
 ### Running Locally
@@ -209,79 +186,25 @@ import os
 os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8081"
 ```
 
-### File Structure Explanation
-
-**app.py**: Contains:
-- Flask app initialization
-- API endpoints
-- Firestore operations
-- Cloud Storage integration
-- Error handling and logging
-
 ## Deployment
 
-### Build Docker Image
+Cloud Run handles deployment automatically from source code. See the main README for deployment instructions.
 
-```bash
-docker build -t gcr.io/PROJECT-ID/backend-api:latest .
-```
-
-### Push to Container Registry
-
-```bash
-docker push gcr.io/PROJECT-ID/backend-api:latest
-```
-
-### Deploy via Terraform
-
-Update `terraform/terraform.tfvars`:
-
-```hcl
-backend_image_url = "gcr.io/PROJECT-ID/backend-api:latest"
-```
-
-Then:
-```bash
-terraform apply
-```
-
-Or use the automated deployment:
-```bash
-bash scripts/deploy.sh
-```
+Run `bash scripts/deploy.sh` from the project root to deploy the backend.
 
 ## Cloud Run Configuration
 
-### View Deployment
+After deployment via `deploy.sh`, view deployment details:
 
 ```bash
-gcloud run services list
-```
+# List services
+gcloud run services list --region=us-central1
 
-### View Logs
+# View specific service
+gcloud run services describe production-api --region=us-central1
 
-```bash
-gcloud run logs read backend-api --region=us-central1 --limit=50
-```
-
-### Scaling
-
-```bash
-# Adjust memory and CPU
-gcloud run services update backend-api \
-  --memory=1Gi \
-  --cpu=2 \
-  --region=us-central1
-
-# Set max concurrent requests
-gcloud run services update backend-api \
-  --concurrency=100 \
-  --region=us-central1
-
-# Set max instances
-gcloud run services update backend-api \
-  --max-instances=10 \
-  --region=us-central1
+# View logs
+gcloud run services logs read production-api --region=us-central1 --limit=50
 ```
 
 ## Database Operations
@@ -321,18 +244,6 @@ Collection: items
 ├── value (number)
 ├── createdAt (timestamp)
 └── updatedAt (timestamp)
-```
-
-## File Operations
-
-### Upload Files to Cloud Storage
-
-```python
-from google.cloud import storage
-
-bucket = storage.Client().bucket(UPLOADS_BUCKET)
-blob = bucket.blob(f"uploads/{filename}")
-blob.upload_from_string(file_data, content_type=content_type)
 ```
 
 ## Testing
@@ -414,7 +325,7 @@ Check:
 ### Cloud Run Logs
 
 ```bash
-gcloud run logs read backend-api --region=us-central1 --limit=100
+gcloud run services logs read production-api --region=us-central1 --limit=100
 ```
 
 ### Port Already in Use
@@ -422,31 +333,6 @@ gcloud run logs read backend-api --region=us-central1 --limit=100
 ```bash
 # Use different port
 PORT=8081 python app.py
-```
-
-### Timeout Errors
-
-1. Increase Cloud Run timeout: up to 3600 seconds
-2. Optimize Firestore queries
-3. Add indexing for complex queries
-
-## Environment Variables
-
-### Development
-```
-GCP_PROJECT_ID=your-local-project
-ENVIRONMENT=development
-PORT=8080
-```
-
-### Production (Cloud Run)
-Set automatically by Terraform:
-```
-GCP_PROJECT_ID=<project-id>
-ENVIRONMENT=production
-FIRESTORE_DATABASE=(default)
-STORAGE_BUCKET=<uploads-bucket>
-PORT=8080
 ```
 
 ## Performance Optimization
@@ -459,28 +345,27 @@ PORT=8080
 
 ## Security
 
-1. **API Gateway Authentication**: Configure in OpenAPI spec
-2. **Input Validation**: Validate all request data
-3. **Error Messages**: Don't expose sensitive info
-4. **Service Account**: Use least-privilege IAM roles
-5. **HTTPS**: Automatic with Cloud Run
-6. **Rate Limiting**: Configured via API Gateway
+1. **Input Validation**: Validate all request data
+2. **Error Messages**: Don't expose sensitive info
+3. **Service Account**: Use least-privilege IAM roles
+4. **HTTPS**: Automatic with Cloud Run
+5. **CORS**: Enabled for cross-origin requests from frontend
 
 ## Monitoring
 
 ### Cloud Run Metrics
 
+View in Cloud Console:
+```
+Cloud Run → production-api → Metrics
+```
+
+Metrics include:
 - Request count
 - Error rate (4xx, 5xx)
 - Latency (p50, p95, p99)
 - Memory usage
 - CPU usage
-- Cold start duration
-
-View in Cloud Console:
-```
-Cloud Run → backend-api → Metrics
-```
 
 ### Custom Logging
 
@@ -496,11 +381,6 @@ def list_items():
     # ... rest of code
 ```
 
-View logs:
-```bash
-gcloud logging read "resource.type=cloud_run_revision" --limit=50
-```
-
 ## Next Steps
 
 1. Add authentication (JWT, OAuth2)
@@ -509,5 +389,3 @@ gcloud logging read "resource.type=cloud_run_revision" --limit=50
 4. Set up CI/CD pipeline
 5. Add comprehensive logging and monitoring
 6. Implement caching strategies
-7. Add image processing for uploaded files
-

@@ -2,36 +2,45 @@
 
 ## Overview
 
-This project uses Terraform to manage a serverless Google Cloud Platform infrastructure. The setup includes:
+This project uses Terraform to manage foundational Google Cloud Platform infrastructure. The setup includes:
 
-- **Cloud Run**: Manages backend API and frontend services
-- **API Gateway**: Centralized API management and routing
 - **Firestore**: NoSQL, serverless database
-- **Cloud Storage**: File uploads and static assets
-- **Service Accounts**: IAM roles and permissions
+- **Cloud Storage**: File uploads and static assets  
+- **Service Accounts**: IAM roles and permissions for backend applications
+- **APIs**: Enables required GCP services
+
+**Note**: Cloud Run services (frontend/backend) are deployed via `deploy.sh` using Cloud Run with Source, not by Terraform. This simplifies deployment and removes Docker complexity.
 
 ## Architecture Diagram
 
 ```
-┌─────────────────────────────────────────┐
-│      API Gateway (public URL)           │
-│  Routes all API requests to Cloud Run   │
-└────────────────┬────────────────────────┘
-                 │
-    ┌────────────┴────────────┐
-    │                         │
-┌───▼──────┐          ┌──────▼────┐
-│ Cloud    │          │ Cloud Run  │
-│ Run      │          │  Backend   │
-│Frontend  │          │  API       │
-└──────────┘          └──────┬─────┘
-                             │
-                   ┌─────────┼────────────┐
-                   │         │            │
-            ┌──────▼──┐  ┌──▼────┐  ┌─────▼───┐
-            │Firestore│  │Storage│  │Logging  │
-            │Database │  │Bucket │  │Monitor. │
-            └─────────┘  └───────┘  └─────────┘
+┌──────────────────────────────────────────────┐
+│    Terraform Managed Infrastructure         │
+├──────────────────────────────────────────────┤
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │ Firestore Database                   │   │
+│  │ - NoSQL document database            │   │
+│  │ - Items collection (CRUD)            │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │ Cloud Storage Buckets                │   │
+│  │ - Uploads bucket (user files)        │   │
+│  │ - Static bucket (reserves)           │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │ Service Account                      │   │
+│  │ - IAM roles for Firestore access     │   │
+│  │ - IAM roles for Cloud Storage access │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+└──────────────────────────────────────────────┘
+
+Cloud Run Services (deployed by deploy.sh):
+├── Frontend (JavaScript/Express)
+└── Backend (Python/Flask)
 ```
 
 ## Terraform Files
@@ -47,23 +56,17 @@ Defines all GCP resources:
 ### variables.tf
 Input variables:
 - `gcp_project_id`: Your GCP project
-- `gcp_region`: Deployment region
+- `gcp_region`: Deployment region  
 - `environment`: dev/staging/production
-- `backend_image_url`: Container image for backend
-- `frontend_image_url`: Container image for frontend
 
 ### outputs.tf
 Exports important values:
-- API Gateway URL
-- Cloud Run service URLs
 - Firestore database name
 - Storage bucket names
+- Service account email
 
 ### openapi.yaml
-API specification for API Gateway:
-- Endpoint definitions
-- Request/response schemas
-- Backend routing
+API specification file (currently not used - frontend connects directly to Cloud Run backend URL)
 
 ## Setup
 
@@ -77,12 +80,9 @@ cp terraform.tfvars.example terraform.tfvars
 ### Edit terraform.tfvars
 
 ```hcl
-gcp_project_id    = "your-gcp-project-id"
-gcp_region        = "us-central1"
-environment       = "dev"
-# Leave these empty initially, update after building containers
-backend_image_url  = ""
-frontend_image_url = ""
+gcp_project_id = "your-gcp-project-id"
+gcp_region     = "us-central1"
+environment    = "development"
 ```
 
 ### Create Terraform State Bucket
@@ -164,21 +164,10 @@ Updates state from actual GCP resources (useful if manual changes were made).
 **Backend API**
 - Service: `dev-api` (or `staging/prod`)
 - Image: `gcr.io/PROJECT-ID/backend-api:latest`
-- Port: 8080
-- Memory: Configurable (default: 512Mi)
-- CPU: Configurable (default: 1)
-- Concurrency: 80 (default)
-- Auto-scales to zero when idle
+- Note**: Cloud Run services are NOT managed by Terraform. They are deployed separately via `deploy.sh` using Cloud Run with Source code deployment.
 
-**Frontend**
-- Service: `dev-frontend`
-- Image: `gcr.io/PROJECT-ID/frontend:latest`
-- Port: 3000
-- Memory: Configurable (default: 512Mi)
-- Concurrency: 80 (default)
-
-### API Gateway
-
+- Backend API: Deployed by `gcloud run deploy` with source code
+- Frontend: Deployed by `gcloud run deploy` with source code
 - **API ID**: `dev-api`
 - **Gateway ID**: `dev-gateway`
 - **OpenAPI Spec**: Defines all endpoints
@@ -188,30 +177,7 @@ Configuration:
 ```yaml
 # openapi.yaml
 paths:
-  /api/health:
-    get:
-      x-google-backend:
-        address: https://backend-cloud-run-url
-        protocol: h2
-  /api/items:
-    get:
-      # ...
-    post:
-      # ...
-```
-
-### Firestore Database
-
-- **Type**: Cloud Firestore (native)
-- **Location**: Same as GCP region
-- **Concurrency**: Optimistic
-- **Auto-scaling**: Enabled
-
-Collections:
-- `items`: Main data collection
-  - Document fields: `title`, `value`, `createdAt`, `updatedAt`
-
-### Cloud Storage Buckets
+  /aCloud Storage Buckets
 
 **Uploads Bucket**
 - Stores user-uploaded files
@@ -309,14 +275,7 @@ environment    = "dev"
 
 - Lower cost instances
 - Shared resources
-- Can destroy easily
-
-### Staging
-
-```hcl
-gcp_project_id = "my-project-staging"
-environment    = "staging"
-```
+- `
 
 - Production-like setup
 - Testing ground

@@ -18,20 +18,13 @@ The frontend:
 ### Prerequisites
 - Node.js 18+
 - npm or yarn
-- Docker (for Cloud Run deployment)
 
 ### Local Development
 
 ```bash
 npm install
-npm run dev
+npm start
 # Frontend runs on http://localhost:3000
-```
-
-### Docker Build (for Cloud Run)
-
-```bash
-docker build -t frontend:latest .
 ```
 
 ## Configuration
@@ -43,10 +36,10 @@ Create a `.env` file (copy from `.env.example`):
 ```
 NODE_ENV=development
 PORT=3000
-API_GATEWAY_URL=http://localhost:8000/api
+API_GATEWAY_URL=http://localhost:8080/api
 ```
 
-In production (Cloud Run), these are set via Terraform outputs.
+In production (Cloud Run), the `API_GATEWAY_URL` is automatically set by `deploy.sh` and fetched dynamically by the frontend at runtime through the `/api/gateway-info` endpoint.
 
 ## Project Structure
 
@@ -54,7 +47,6 @@ In production (Cloud Run), these are set via Terraform outputs.
 frontend/
 ├── server.js              # Express server
 ├── package.json          # Dependencies
-├── Dockerfile            # Container image
 ├── public/               # Static files served to browser
 │   ├── index.html        # Main HTML page
 │   ├── style.css         # Styling
@@ -68,25 +60,21 @@ frontend/
 
 ### API Configuration
 
-The API URL is automatically configured based on the environment:
+The API URL is automatically configured at runtime:
 
 **Development (Local)**
 ```javascript
 const CONFIG = {
-  API_GATEWAY_URL: 'http://localhost:8000/api'
+  API_GATEWAY_URL: 'http://localhost:8080/api'
 };
 ```
 
 **Production (Cloud Run)**
-```javascript
-const CONFIG = {
-  API_GATEWAY_URL: '<api-gateway-url>/api'  // Set by Terraform
-};
-```
+The frontend fetches the backend URL from the server's `/api/gateway-info` endpoint at startup.
 
 ### Available API Endpoints
 
-All requests go through API Gateway:
+All requests go to the backend Cloud Run service:
 
 ```javascript
 // Health check
@@ -153,35 +141,9 @@ const data = await response.json();
 
 ## Deployment
 
-### Build Docker Image
+Cloud Run handles deployment automatically from source code. See the main README for deployment instructions.
 
-```bash
-docker build -t gcr.io/PROJECT-ID/frontend:latest .
-```
-
-### Push to Container Registry
-
-```bash
-docker push gcr.io/PROJECT-ID/frontend:latest
-```
-
-### Deploy via Terraform
-
-Update `terraform/terraform.tfvars`:
-
-```hcl
-frontend_image_url = "gcr.io/PROJECT-ID/frontend:latest"
-```
-
-Then:
-```bash
-terraform apply
-```
-
-Or use the automated deployment:
-```bash
-bash scripts/deploy.sh
-```
+Run `bash scripts/deploy.sh` from the project root to deploy the frontend.
 
 ## Cloud Run Configuration
 
