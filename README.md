@@ -18,37 +18,37 @@ A serverless full-stack web application built with Terraform for GCP infrastruct
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    GCP Serverless Stack                  │
+│                    GCP Serverless Stack                 │
 ├─────────────────────────────────────────────────────────┤
-│                                                           │
+│                                                         │
 │  ┌──────────────────────────────────────────────────┐   │
 │  │  Cloud Run Frontend (JavaScript/Node.js)         │   │
 │  │  - Serves static assets + configuration          │   │
 │  │  - Auto-scales based on traffic                  │   │
 │  │  - Pay only for execution time                   │   │
 │  └────────────────┬─────────────────────────────────┘   │
-│                   │                                       │
+│                   │                                     │
 │  ┌────────────────▼─────────────────────────────────┐   │
 │  │  API Gateway                                     │   │
-│  │  - Single entry point for all API calls         │   │
-│  │  - Rate limiting, authentication, logging       │   │
-│  │  - CORS management                              │   │
+│  │  - Single entry point for all API calls          │   │
+│  │  - Rate limiting, authentication, logging        │   │
+│  │  - CORS management                               │   │
 │  └────────────────┬─────────────────────────────────┘   │
-│                   │                                       │
+│                   │                                     │
 │  ┌────────────────▼─────────────────────────────────┐   │
 │  │  Cloud Run Backend (Python/Flask)                │   │
 │  │  - RESTful API endpoints                         │   │
-│  │  - Auto-scales to zero when idle                │   │
+│  │  - Auto-scales to zero when idle                 │   │
 │  │  - Firestore integration                         │   │
 │  └────────────────┬─────────────────────────────────┘   │
-│                   │                                       │
+│                   │                                     │
 │  ┌────────────────▼────────┐  ┌──────────────────────┐  │
 │  │  Firestore (NoSQL)      │  │  Cloud Storage       │  │
 │  │  - Document database    │  │  - File uploads      │  │
 │  │  - Real-time sync       │  │  - Static assets     │  │
 │  │  - Free tier friendly   │  │  - Bucket storage    │  │
 │  └─────────────────────────┘  └──────────────────────┘  │
-│                                                           │
+│                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
 
