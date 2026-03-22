@@ -2,15 +2,34 @@
 document.addEventListener('DOMContentLoaded', async function() {
   // Wait a moment for config to initialize from server
   await new Promise(resolve => setTimeout(resolve, 500));
-  
+
+  initBubbles();
   checkFrontendHealth();
   checkAPIGatewayHealth();
-  fetchItems();
 
   // Refresh status every 30 seconds
   setInterval(checkFrontendHealth, 30000);
   setInterval(checkAPIGatewayHealth, 30000);
 });
+
+function initBubbles() {
+  const container = document.getElementById('bubbles');
+  if (!container) return;
+  const count = 14;
+  for (let i = 0; i < count; i++) {
+    const b = document.createElement('span');
+    b.className = 'bubble';
+    const size = 4 + Math.random() * 10;
+    b.style.cssText = [
+      `width:${size}px`,
+      `height:${size}px`,
+      `left:${Math.random() * 100}%`,
+      `--dur:${5 + Math.random() * 8}s`,
+      `--delay:${Math.random() * 6}s`
+    ].join(';');
+    container.appendChild(b);
+  }
+}
 
 // ============ Tab Navigation ============
 function switchTab(tabName, el) {
@@ -25,26 +44,41 @@ async function checkFrontendHealth() {
   try {
     const response = await fetch('/health');
     const data = await response.json();
-    
     const element = document.getElementById('frontend-health');
     element.textContent = `Status: ${data.status}`;
     element.parentElement.parentElement.classList.add('healthy');
+    updateSidebarHealth(true);
   } catch (error) {
     document.getElementById('frontend-health').textContent = 'Status: Error — Unreachable';
     document.getElementById('frontend-status').classList.add('unhealthy');
+    updateSidebarHealth(false);
   }
 }
 
 async function checkAPIGatewayHealth() {
   try {
     const data = await API.health();
-    
     const element = document.getElementById('api-gateway-health');
     element.textContent = `Status: ${data.status}`;
     element.parentElement.parentElement.classList.add('healthy');
   } catch (error) {
     document.getElementById('api-gateway-health').textContent = 'Status: Unreachable';
     document.getElementById('api-gateway-status').classList.add('unhealthy');
+  }
+}
+
+function updateSidebarHealth(ok) {
+  const pill = document.getElementById('stat-health');
+  if (!pill) return;
+  const label = pill.querySelector('.stat-label');
+  if (ok) {
+    pill.classList.add('healthy');
+    pill.classList.remove('unhealthy');
+    if (label) label.textContent = 'Online';
+  } else {
+    pill.classList.add('unhealthy');
+    pill.classList.remove('healthy');
+    if (label) label.textContent = 'Offline';
   }
 }
 
@@ -73,10 +107,12 @@ function toggleBehavior(el) {
 
 function resetUploadForm() {
   const preview = document.getElementById('image-preview');
-  const zoneInner = document.getElementById('upload-zone-inner');
   preview.classList.add('hidden');
   preview.src = '';
-  zoneInner.classList.remove('hidden');
+  document.getElementById('ocean-bg').classList.remove('hidden');
+  document.getElementById('hero-whale').classList.remove('hidden');
+  document.getElementById('hero-prompt').classList.remove('hidden');
+  document.getElementById('hero-change').classList.add('hidden');
   document.getElementById('fileInfo').textContent = '';
   document.querySelectorAll('#species-chips .chip').forEach(c => c.classList.remove('active'));
   document.getElementById('speciesType').value = '';
@@ -90,7 +126,6 @@ function updateFileInfo() {
   const fileInput = document.getElementById('imageFile');
   const fileInfo = document.getElementById('fileInfo');
   const preview = document.getElementById('image-preview');
-  const zoneInner = document.getElementById('upload-zone-inner');
 
   if (fileInput.files.length > 0) {
     const file = fileInput.files[0];
@@ -100,7 +135,10 @@ function updateFileInfo() {
     reader.onload = (e) => {
       preview.src = e.target.result;
       preview.classList.remove('hidden');
-      zoneInner.classList.add('hidden');
+      document.getElementById('ocean-bg').classList.add('hidden');
+      document.getElementById('hero-whale').classList.add('hidden');
+      document.getElementById('hero-prompt').classList.add('hidden');
+      document.getElementById('hero-change').classList.remove('hidden');
     };
     reader.readAsDataURL(file);
   }
@@ -368,87 +406,4 @@ function previousPage() {
 function nextPage() {
   currentSearchPage++;
   loadSearchResults();
-}
-
-// ============ Legacy Data Management ============
-async function fetchItems() {
-  const container = document.getElementById('items-container');
-  
-  try {
-    const data = await API.listItems();
-    
-    if (!data.items || data.items.length === 0) {
-      container.innerHTML = '<p class="no-items">No items yet. Create one to get started!</p>';
-      return;
-    }
-
-    const itemsHTML = data.items.map(item => `
-      <div class="item-card">
-        <div class="item-header">
-          <h4>${escapeHtml(item.title)}</h4>
-          <span class="item-value">$${item.value}</span>
-        </div>
-        <p class="item-id">ID: ${item.id}</p>
-        <div class="item-actions">
-          <button onclick="deleteItemConfirm('${item.id}')" class="btn btn-danger btn-small">Delete</button>
-        </div>
-      </div>
-    `).join('');
-
-    container.innerHTML = `
-      <div class="items-list">
-        <p class="items-count">Total items: ${data.items.length}</p>
-        ${itemsHTML}
-      </div>
-    `;
-  } catch (error) {
-    container.innerHTML = `<p class="error">Error loading items: ${error.message}</p>`;
-  }
-}
-
-async function createItem(event) {
-  event.preventDefault();
-
-  const title = document.getElementById('itemTitle').value;
-  const value = parseFloat(document.getElementById('itemValue').value);
-
-  try {
-    await API.createItem({ title, value });
-    hideCreateForm();
-    clearForm();
-    fetchItems();
-  } catch (error) {
-    alert(`Error creating item: ${error.message}`);
-  }
-}
-
-async function deleteItemConfirm(id) {
-  if (confirm('Are you sure you want to delete this item?')) {
-    try {
-      await API.deleteItem(id);
-      fetchItems();
-    } catch (error) {
-      alert(`Error deleting item: ${error.message}`);
-    }
-  }
-}
-
-function showCreateForm() {
-  document.getElementById('create-form').classList.remove('hidden');
-  document.getElementById('itemTitle').focus();
-}
-
-function hideCreateForm() {
-  document.getElementById('create-form').classList.add('hidden');
-}
-
-function clearForm() {
-  document.getElementById('itemTitle').value = '';
-  document.getElementById('itemValue').value = '';
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
