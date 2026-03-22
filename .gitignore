@@ -58,3 +58,9 @@ Thumbs.db
 terraform/terraform.tfvars
 terraform/variables.tf
 
+# Local credentials
+backend-service-account-key.json
+backend/backend-service-account-key.json
+*.service-account.json
+*.credentials.json
+

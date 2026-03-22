@@ -31,6 +31,16 @@ output "static_bucket_name" {
   value       = google_storage_bucket.static_assets.name
 }
 
+output "whale_images_bucket_name" {
+  description = "Cloud Storage bucket for whale images"
+  value       = google_storage_bucket.whale_images.name
+}
+
+output "whale_models_bucket_name" {
+  description = "Cloud Storage bucket for ML models"
+  value       = google_storage_bucket.whale_models.name
+}
+
 output "backend_service_account_email" {
   description = "Service Account email for backend"
   value       = google_service_account.backend_sa.email

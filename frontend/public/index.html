@@ -3,18 +3,266 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Whales Application</title>
+    <title>Whales Classification System</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🐋 Whales Application</h1>
-            <p>Serverless Full-Stack App on GCP</p>
+            <h1>🐋 Whale Image Classification</h1>
+            <p>Upload and Search Whale Images with Metadata</p>
         </header>
 
+        <nav class="tabs">
+            <button class="tab-button active" onclick="switchTab('upload')">Upload Image</button>
+            <button class="tab-button" onclick="switchTab('search')">Search Gallery</button>
+            <button class="tab-button" onclick="switchTab('status')">System Status</button>
+            <button class="tab-button" onclick="switchTab('data')">Data Management</button>
+        </nav>
+
         <main>
-            <section class="health-check">
+            <!-- Upload Tab -->
+            <section id="upload-tab" class="tab-content active">
+                <h2>Upload Whale Image</h2>
+                <div class="form-container">
+                    <form id="whale-upload-form" onsubmit="handleWhaleImageUpload(event)">
+                        
+                        <!-- Image File Input -->
+                        <fieldset>
+                            <legend>Image File</legend>
+                            <div class="form-group">
+                                <label for="imageFile">Select Image *</label>
+                                <input 
+                                    type="file" 
+                                    id="imageFile" 
+                                    accept="image/*" 
+                                    required
+                                    onchange="updateFileInfo()"
+                                >
+                                <small id="fileInfo"></small>
+                            </div>
+                        </fieldset>
+
+                        <!-- Identification -->
+                        <fieldset>
+                            <legend>Whale Identification</legend>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="speciesType">Species Type *</label>
+                                    <select id="speciesType" required>
+                                        <option value="">-- Select Species --</option>
+                                        <option value="humpback">Humpback</option>
+                                        <option value="fin">Fin</option>
+                                        <option value="blue">Blue</option>
+                                        <option value="gray">Gray</option>
+                                        <option value="right">Right</option>
+                                        <option value="sperm">Sperm</option>
+                                        <option value="beluga">Beluga</option>
+                                        <option value="orca">Orca</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="whaleName">Whale Name (if known)</label>
+                                    <input type="text" id="whaleName" placeholder="e.g., Helen, Fred">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="confidence">Identification Confidence</label>
+                                    <select id="confidence">
+                                        <option value="">-- Select Confidence --</option>
+                                        <option value="high">High</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="low">Low</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="podSize">Pod Size (# of whales)</label>
+                                    <input type="number" id="podSize" min="1" placeholder="1">
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <!-- Location -->
+                        <fieldset>
+                            <legend>Location</legend>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="location_lat">Latitude</label>
+                                    <input type="number" id="location_lat" step="0.0001" placeholder="42.3601">
+                                </div>
+                                <div class="form-group">
+                                    <label for="location_long">Longitude</label>
+                                    <input type="number" id="location_long" step="0.0001" placeholder="-71.0589">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="region">Region</label>
+                                <input type="text" id="region" placeholder="e.g., Alaska, Northeast">
+                            </div>
+                        </fieldset>
+
+                        <!-- Observations -->
+                        <fieldset>
+                            <legend>Observations</legend>
+                            <div class="form-group">
+                                <label for="behavior">Behavior (select all that apply)</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" name="behavior" value="feeding"> Feeding</label>
+                                    <label><input type="checkbox" name="behavior" value="breaching"> Breaching</label>
+                                    <label><input type="checkbox" name="behavior" value="fluking"> Fluking</label>
+                                    <label><input type="checkbox" name="behavior" value="spyhopping"> Spyhopping</label>
+                                    <label><input type="checkbox" name="behavior" value="traveling"> Traveling</label>
+                                    <label><input type="checkbox" name="behavior" value="resting"> Resting</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="visibleFeatures">Distinctive Features / Markings</label>
+                                <textarea id="visibleFeatures" placeholder="e.g., large scar on left fluke, white markings, unique tail pattern..." rows="3"></textarea>
+                            </div>
+                        </fieldset>
+
+                        <!-- Environment -->
+                        <fieldset>
+                            <legend>Environmental Conditions</legend>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="waterConditions">Water Visibility</label>
+                                    <select id="waterConditions">
+                                        <option value="">-- Select Conditions --</option>
+                                        <option value="excellent">Excellent</option>
+                                        <option value="good">Good</option>
+                                        <option value="fair">Fair</option>
+                                        <option value="poor">Poor</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="timeOfDay">Time of Day</label>
+                                    <select id="timeOfDay">
+                                        <option value="">-- Select Time --</option>
+                                        <option value="morning">Morning</option>
+                                        <option value="afternoon">Afternoon</option>
+                                        <option value="evening">Evening</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <!-- Attribution -->
+                        <fieldset>
+                            <legend>Attribution</legend>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="observerName">Observer/Naturalist Name</label>
+                                    <input type="text" id="observerName" placeholder="Your name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="vesselName">Vessel Name</label>
+                                    <input type="text" id="vesselName" placeholder="Whale watching vessel name">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="notes">Additional Notes</label>
+                                <textarea id="notes" placeholder="Any other observations..." rows="2"></textarea>
+                            </div>
+                        </fieldset>
+
+                        <!-- Timestamp (auto-filled) -->
+                        <input type="hidden" id="timestamp">
+
+                        <!-- Submit -->
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-large">Upload Image</button>
+                            <button type="reset" class="btn btn-secondary">Clear Form</button>
+                        </div>
+                    </form>
+
+                    <!-- Upload Progress -->
+                    <div id="upload-progress" class="hidden">
+                        <h3>Upload Progress</h3>
+                        <div id="progress-container"></div>
+                    </div>
+
+                    <!-- Upload Status -->
+                    <div id="upload-status" class="hidden"></div>
+                </div>
+            </section>
+
+            <!-- Search Tab -->
+            <section id="search-tab" class="tab-content">
+                <h2>Search Whale Images</h2>
+                
+                <!-- Search Filters -->
+                <div class="search-filters">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="search-species">Species</label>
+                            <select id="search-species">
+                                <option value="">All Species</option>
+                                <option value="humpback">Humpback</option>
+                                <option value="fin">Fin</option>
+                                <option value="blue">Blue</option>
+                                <option value="gray">Gray</option>
+                                <option value="right">Right</option>
+                                <option value="sperm">Sperm</option>
+                                <option value="beluga">Beluga</option>
+                                <option value="orca">Orca</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="search-region">Region</label>
+                            <input type="text" id="search-region" placeholder="e.g., Alaska">
+                        </div>
+                        <div class="form-group">
+                            <label for="search-whale-name">Whale Name</label>
+                            <input type="text" id="search-whale-name" placeholder="Known whale name">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="search-start-date">From Date</label>
+                            <input type="date" id="search-start-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="search-end-date">To Date</label>
+                            <input type="date" id="search-end-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="search-behavior">Behavior</label>
+                            <select id="search-behavior">
+                                <option value="">All Behaviors</option>
+                                <option value="feeding">Feeding</option>
+                                <option value="breaching">Breaching</option>
+                                <option value="fluking">Fluking</option>
+                                <option value="spyhopping">Spyhopping</option>
+                                <option value="traveling">Traveling</option>
+                                <option value="resting">Resting</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button onclick="performSearch()" class="btn btn-primary">Search</button>
+                        <button onclick="clearSearchFilters()" class="btn btn-secondary">Clear Filters</button>
+                    </div>
+                </div>
+
+                <!-- Search Results -->
+                <div id="search-results" class="gallery-container">
+                    <p>Use filters above to search for whale images</p>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination" class="pagination hidden">
+                    <button onclick="previousPage()" class="btn btn-secondary">Previous</button>
+                    <span id="page-info"></span>
+                    <button onclick="nextPage()" class="btn btn-secondary">Next</button>
+                </div>
+            </section>
+
+            <!-- Status Tab -->
+            <section id="status-tab" class="tab-content">
                 <h2>System Status</h2>
                 <div class="status-grid">
                     <div id="frontend-status" class="status-card">
@@ -28,7 +276,8 @@
                 </div>
             </section>
 
-            <section class="data-section">
+            <!-- Data Management Tab (Legacy) -->
+            <section id="data-tab" class="tab-content">
                 <h2>Data Management</h2>
                 <div class="controls">
                     <button onclick="fetchItems()" class="btn btn-primary">Refresh Items</button>
@@ -62,12 +311,13 @@
         </main>
 
         <footer>
-            <p>&copy; 2024 Whales Application | Serverless Architecture</p>
+            <p>&copy; 2026 Whale Image Classification | Powered by GCP Serverless</p>
         </footer>
     </div>
 
     <script src="/config.js"></script>
     <script src="/api.js"></script>
+    <script src="/whaleImages.js"></script>
     <script src="/app.js"></script>
 </body>
 </html>

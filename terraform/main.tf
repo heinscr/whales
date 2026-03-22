@@ -1,3 +1,8 @@
+resource "google_project_iam_member" "backend_token_creator" {
+  project = var.gcp_project_id
+  role    = "roles/iam.serviceAccountTokenCreator"
+  member  = "serviceAccount:${google_service_account.backend_sa.email}"
+}
 terraform {
   required_version = ">= 1.0"
   required_providers {
@@ -77,6 +82,13 @@ resource "google_storage_bucket" "application_uploads" {
 
   uniform_bucket_level_access = true
 
+  cors {
+    origin          = ["*"]
+    method          = ["GET", "HEAD", "PUT", "POST", "OPTIONS"]
+    response_header = ["Content-Type", "x-goog-resumable"]
+    max_age_seconds = 3600
+  }
+
   versioning {
     enabled = false
   }
@@ -91,6 +103,49 @@ resource "google_storage_bucket" "static_assets" {
 
   versioning {
     enabled = var.environment == "production"
+  }
+}
+
+# Cloud Storage Bucket for Whale Images
+resource "google_storage_bucket" "whale_images" {
+  name          = "${var.gcp_project_id}-${var.environment}-whale-images"
+  location      = var.gcp_region
+  force_destroy = var.environment != "production"
+
+  uniform_bucket_level_access = true
+
+  cors {
+    origin          = ["*"]
+    method          = ["GET", "HEAD", "PUT", "POST", "OPTIONS"]
+    response_header = ["Content-Type", "x-goog-resumable"]
+    max_age_seconds = 3600
+  }
+
+  versioning {
+    enabled = var.environment == "production"
+  }
+
+  lifecycle_rule {
+    condition {
+      age = 90
+    }
+    action {
+      type          = "SetStorageClass"
+      storage_class = "COLDLINE"
+    }
+  }
+}
+
+# Cloud Storage Bucket for ML Models
+resource "google_storage_bucket" "whale_models" {
+  name          = "${var.gcp_project_id}-${var.environment}-whale-models"
+  location      = var.gcp_region
+  force_destroy = var.environment != "production"
+
+  uniform_bucket_level_access = true
+
+  versioning {
+    enabled = true
   }
 }
 

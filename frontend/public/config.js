@@ -16,6 +16,11 @@ async function initConfig() {
   } catch (error) {
     console.log('Using default API URL:', CONFIG.API_GATEWAY_URL);
   }
+  
+  // Expose to global scope for WhaleImages module
+  window.config = {
+    apiGatewayUrl: CONFIG.API_GATEWAY_URL
+  };
 }
 
 // Initialize config on page load

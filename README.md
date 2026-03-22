@@ -108,7 +108,20 @@ A serverless full-stack web application built with Terraform for GCP infrastruct
 **That's it!** The infrastructure.sh script will automatically:
 - Enable required GCP APIs
 - Create the Terraform state storage bucket
-- Set up Firestore, Cloud Storage, and service accounts
+- Set up Cloud Storage and service accounts
+
+### Firestore Initialization
+
+Google Cloud requires a one-time manual Firestore database initialization for each project. Terraform can manage Firestore-related resources only after the database exists.
+
+Before running infrastructure or deployment scripts, create the Firestore database in the Google Cloud Console:
+
+1. Open `https://console.cloud.google.com/datastore/setup?project=YOUR_GCP_PROJECT_ID`
+2. Choose `Firestore` in `Native mode`
+3. Use database ID `(default)`
+4. Select the same region as your deployment, for example `us-central1`
+
+After this one-time step, you can continue with Terraform and the deployment scripts normally.
 
 ## Project Structure
 
@@ -192,10 +205,11 @@ bash scripts/infrastructure.sh
 
 This will:
 - Initialize Terraform
-- Create Firestore database
 - Setup Cloud Storage buckets
 - Configure API Gateway
 - Create necessary service accounts
+
+Note: the initial Firestore database must already exist before this step. See `Firestore Initialization` above.
 
 ### 4. Deploy Applications
 
@@ -204,9 +218,12 @@ bash scripts/deploy.sh
 ```
 
 This will:
-- Deploy backend API to Cloud Run (Python with source)
-- Deploy frontend to Cloud Run (Node.js with source)
-- Google Cloud automatically builds containers from your source code
+- Build backend Docker image and push to Google Container Registry
+- Build frontend Docker image and push to Google Container Registry
+- Deploy backend to Cloud Run (Python/Flask)
+- Deploy frontend to Cloud Run (Node.js/Express)
+- Configure service accounts and permissions
+- Output deployment URLs
 
 ### 5. Access Your Application
 
@@ -214,23 +231,44 @@ After deployment, you'll see URLs for:
 - **Frontend**: `https://<frontend-cloud-run-url>`
 - **Backend**: `https://<backend-cloud-run-url>`
 
-Just visit the Frontend URL to access the application.
+Visit the Frontend URL to access the application.
 
 ## Deployment
 
-Deployment is fully automated using Cloud Run with Source:
+Deployment is fully automated with container building and image management:
 
 ```bash
 bash scripts/deploy.sh
 ```
 
 **What happens:**
-1. Backend code is deployed as a Cloud Run service
-2. Frontend code is deployed as a Cloud Run service  
-3. Google Cloud automatically builds containers and applies optimizations
-4. Services are configured with appropriate environment variables and resource limits
 
-**No Docker required!** Cloud Run builds everything for you.
+1. **Build Backend**: Python code is containerized using the backend Dockerfile
+2. **Push Backend**: Image is pushed to Google Container Registry
+3. **Deploy Backend**: Cloud Run service is created/updated with the image
+4. **Build Frontend**: Node.js code is containerized
+5. **Push Frontend**: Image is pushed to Google Container Registry  
+6. **Deploy Frontend**: Cloud Run service is created/updated with the image
+7. **Configure Permissions**: Service accounts are granted necessary IAM roles for Firestore and Cloud Storage
+
+**Key Features:**
+- Images are tagged with environment (dev/production) and "latest"
+- Each deployment is immutable (images are versioned)
+- Automatic scaling configured (0-100 instances)
+- Environment variables auto-configured based on Terraform outputs
+
+**To monitor deployments:**
+
+```bash
+# View backend logs (live)
+gcloud alpha run logs read production-backend --region us-central1 --follow
+
+# View frontend logs  
+gcloud alpha run logs read production-frontend --region us-central1 --follow
+
+# Check service status
+gcloud run services describe production-backend --region us-central1
+```
 
 ## Configuration
 
@@ -240,14 +278,15 @@ bash scripts/deploy.sh
 ```
 NODE_ENV=production
 PORT=3000
-API_GATEWAY_URL=https://<api-gateway-url>
+API_GATEWAY_URL=https://<backend-cloud-run-url>/api
 ```
 
-**Backend Environment Variables** (auto-configured by deploy.sh):
+**Backend** (auto-configured by deploy.sh):
 - `GCP_PROJECT_ID` - Your GCP project
 - `ENVIRONMENT` - dev, staging, or production
 - `FIRESTORE_DATABASE` - Firestore database name
-- `STORAGE_BUCKET` - Cloud Storage bucket for uploads
+- `WHALE_IMAGES_BUCKET` - Cloud Storage bucket for whale images
+- `STORAGE_BUCKET` - Cloud Storage bucket for general uploads
 
 ### Terraform Variables
 
