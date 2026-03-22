@@ -13,20 +13,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 // ============ Tab Navigation ============
-function switchTab(tabName) {
-  // Hide all tabs
-  document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.classList.remove('active');
-  });
-
-  // Remove active class from all buttons
-  document.querySelectorAll('.tab-button').forEach(btn => {
-    btn.classList.remove('active');
-  });
-
-  // Show selected tab
+function switchTab(tabName, el) {
+  document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
   document.getElementById(tabName + '-tab').classList.add('active');
-  event.target.classList.add('active');
+  el.classList.add('active');
 }
 
 // ============ System Health Check ============
@@ -37,9 +28,9 @@ async function checkFrontendHealth() {
     
     const element = document.getElementById('frontend-health');
     element.textContent = `Status: ${data.status}`;
-    element.parentElement.classList.add('healthy');
+    element.parentElement.parentElement.classList.add('healthy');
   } catch (error) {
-    document.getElementById('frontend-health').textContent = 'Status: Error - Unreachable';
+    document.getElementById('frontend-health').textContent = 'Status: Error — Unreachable';
     document.getElementById('frontend-status').classList.add('unhealthy');
   }
 }
@@ -50,22 +41,68 @@ async function checkAPIGatewayHealth() {
     
     const element = document.getElementById('api-gateway-health');
     element.textContent = `Status: ${data.status}`;
-    element.parentElement.classList.add('healthy');
+    element.parentElement.parentElement.classList.add('healthy');
   } catch (error) {
     document.getElementById('api-gateway-health').textContent = 'Status: Unreachable';
     document.getElementById('api-gateway-status').classList.add('unhealthy');
   }
 }
 
+// ============ Upload Zone (drag-drop + preview) ============
+function handleDrop(event) {
+  event.preventDefault();
+  event.currentTarget.classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('imageFile').files = dt.files;
+    updateFileInfo();
+  }
+}
+
+function selectSpecies(el) {
+  document.querySelectorAll('#species-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('speciesType').value = el.dataset.value;
+}
+
+function toggleBehavior(el) {
+  el.classList.toggle('active');
+}
+
+function resetUploadForm() {
+  const preview = document.getElementById('image-preview');
+  const zoneInner = document.getElementById('upload-zone-inner');
+  preview.classList.add('hidden');
+  preview.src = '';
+  zoneInner.classList.remove('hidden');
+  document.getElementById('fileInfo').textContent = '';
+  document.querySelectorAll('#species-chips .chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('speciesType').value = '';
+  document.querySelectorAll('.behavior-chips .chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('upload-status').classList.add('hidden');
+  document.getElementById('upload-progress').classList.add('hidden');
+}
+
 // ============ Whale Image Upload ============
 function updateFileInfo() {
   const fileInput = document.getElementById('imageFile');
   const fileInfo = document.getElementById('fileInfo');
-  
+  const preview = document.getElementById('image-preview');
+  const zoneInner = document.getElementById('upload-zone-inner');
+
   if (fileInput.files.length > 0) {
     const file = fileInput.files[0];
     const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-    fileInfo.textContent = `${file.name} (${sizeMB} MB)`;
+    fileInfo.textContent = `${file.name} — ${sizeMB} MB`;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      preview.src = e.target.result;
+      preview.classList.remove('hidden');
+      zoneInner.classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
   }
 }
 
@@ -80,12 +117,18 @@ async function handleWhaleImageUpload(event) {
     return;
   }
 
-  // Collect metadata
-  const behaviors = Array.from(document.querySelectorAll('input[name="behavior"]:checked'))
-    .map(cb => cb.value);
+  const speciesType = document.getElementById('speciesType').value;
+  if (!speciesType) {
+    alert('Please select a species');
+    return;
+  }
+
+  // Collect behaviors from active chips
+  const behaviors = Array.from(document.querySelectorAll('.behavior-chips .chip.active'))
+    .map(el => el.dataset.value);
 
   const rawMetadata = {
-    speciesType: document.getElementById('speciesType').value,
+    speciesType,
     whaleName: document.getElementById('whaleName').value,
     confidence: document.getElementById('confidence').value,
     podSize: document.getElementById('podSize').value,
@@ -146,21 +189,18 @@ async function handleWhaleImageUpload(event) {
 
   try {
     const result = await WhaleImages.uploadWhaleImage(file, metadata);
-    
-    // Show success
+
     document.getElementById('upload-status').classList.remove('hidden');
     document.getElementById('upload-status').innerHTML = `
       <div class="status-success">
-        <h3>✓ Upload Successful!</h3>
+        <h3>✓ Upload successful</h3>
         <p>Image ID: ${result.imageId}</p>
-        <p>Your whale image has been uploaded and cataloged.</p>
+        <p>Your whale sighting has been cataloged.</p>
       </div>
     `;
-    
-    // Reset form
     document.getElementById('whale-upload-form').reset();
-    document.getElementById('fileInfo').textContent = '';
-    
+    resetUploadForm();
+
   } catch (error) {
     document.getElementById('upload-status').classList.remove('hidden');
     document.getElementById('upload-status').innerHTML = `
@@ -314,7 +354,7 @@ function clearSearchFilters() {
   document.getElementById('search-start-date').value = '';
   document.getElementById('search-end-date').value = '';
   document.getElementById('search-behavior').value = '';
-  document.getElementById('search-results').innerHTML = '<p>Use filters above to search for whale images</p>';
+  document.getElementById('search-results').innerHTML = '<p class="gallery-placeholder">Use the filters above to search for whale images</p>';
   document.getElementById('pagination').classList.add('hidden');
 }
 

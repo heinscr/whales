@@ -300,35 +300,52 @@ environment       = "production"
 
 ## Development
 
-### Local Testing (No Docker Needed)
+### Local Setup
 
-You can test the application locally without Docker before deploying to GCP.
+After running `bash scripts/deploy.sh` at least once, it writes a `local.env` file at `~/.config/whales/local.env` containing all the environment variables (credentials path, project ID, bucket names, etc.) needed to run the backend locally.
 
 **Terminal 1: Start Backend**
 
 ```bash
 cd backend
-python3 -m venv venv
+python3 -m venv venv          # first time only
 source venv/bin/activate
-pip install -r requirements.txt
-python app.py   # Runs on http://localhost:8080
+pip install -r requirements.txt  # first time only
+
+source ~/.config/whales/local.env
+python app.py   # runs on http://localhost:8000
+```
+
+Or as a one-liner after the first setup:
+
+```bash
+cd backend && source venv/bin/activate && source ~/.config/whales/local.env && python app.py
 ```
 
 **Terminal 2: Start Frontend**
 
 ```bash
 cd frontend
-npm install
-npm start   # Runs on http://localhost:3000
+npm install   # first time only
+API_GATEWAY_URL="http://localhost:8000/api" npm start   # runs on http://localhost:3000
 ```
 
-Then visit `http://localhost:3000` in your browser to test the application.
+Then visit `http://localhost:3000`.
 
-**Note**: The frontend will call your backend at `http://localhost:8080`. To configure this, create a `.env` file in the frontend directory:
+> **Note:** `~/.config/whales/local.env` is regenerated on every `deploy.sh` run, so it always reflects the current project and environment. Never commit it — it contains a path to your service account key.
 
-```
-API_GATEWAY_URL=http://localhost:8080
-```
+### What's in local.env
+
+| Variable | Description |
+|---|---|
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to the service account key downloaded by `deploy.sh` |
+| `GCP_PROJECT_ID` | Your GCP project ID |
+| `ENVIRONMENT` | Current environment (e.g. `production`) |
+| `FIRESTORE_DATABASE` | Firestore database ID (`(default)`) |
+| `WHALE_IMAGES_BUCKET` | GCS bucket for whale images |
+| `STORAGE_BUCKET` | GCS bucket for uploads |
+| `SIGNING_SERVICE_ACCOUNT` | Service account used to sign GCS URLs |
+| `PORT` | Backend port (`8000`) |
 
 ### Working with Firestore Locally
 
